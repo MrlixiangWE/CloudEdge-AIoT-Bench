@@ -4,7 +4,7 @@ metadata:
   name: w2-read-frame
   labels: {app: w2-read-frame}
 spec:
-  replicas: 4
+  replicas: 2
   selector:
     matchLabels: {app: w2-read-frame}
   template:
@@ -12,7 +12,7 @@ spec:
       labels: {app: w2-read-frame}
     spec:
       nodeSelector:
-        hedices.io/tier: edge
+        hedices.io/tier: cloud
       tolerations:  # leave a failed node after 5 s instead of the default 300 s
       - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
       - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
@@ -79,6 +79,49 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: w2-retrack
+  labels: {app: w2-retrack}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w2-retrack}
+  template:
+    metadata:
+      labels: {app: w2-retrack}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w2-onnx:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: retrack}
+        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 1Gi}
+        readinessProbe:  # ready once the model is loaded and the port opens
+          tcpSocket: {port: 8080}
+          periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w2-retrack
+spec:
+  selector: {app: w2-retrack}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: w2-track
   labels: {app: w2-track}
 spec:
@@ -118,15 +161,15 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: w2-retrack
-  labels: {app: w2-retrack}
+  name: w2-aggregate
+  labels: {app: w2-aggregate}
 spec:
   replicas: 2
   selector:
-    matchLabels: {app: w2-retrack}
+    matchLabels: {app: w2-aggregate}
   template:
     metadata:
-      labels: {app: w2-retrack}
+      labels: {app: w2-aggregate}
     spec:
       nodeSelector:
         hedices.io/tier: cloud
@@ -135,25 +178,21 @@ spec:
       - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
       containers:
       - name: stage
-        image: aiot-bench/w2-onnx:latest
+        image: aiot-bench/w2-base:latest
         imagePullPolicy: IfNotPresent
         env:
-        - {name: STAGE, value: retrack}
-        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        - {name: STAGE, value: aggregate}
         ports:
         - containerPort: 8080
         resources:
-          requests: {cpu: "2", memory: 1Gi}
-        readinessProbe:  # ready once the model is loaded and the port opens
-          tcpSocket: {port: 8080}
-          periodSeconds: 2
+          requests: {cpu: "1", memory: 512Mi}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: w2-retrack
+  name: w2-aggregate
 spec:
-  selector: {app: w2-retrack}
+  selector: {app: w2-aggregate}
   ports:
   - port: 80
     targetPort: 8080
@@ -193,45 +232,6 @@ metadata:
   name: w2-track-update
 spec:
   selector: {app: w2-track-update}
-  ports:
-  - port: 80
-    targetPort: 8080
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: w2-aggregate
-  labels: {app: w2-aggregate}
-spec:
-  replicas: 2
-  selector:
-    matchLabels: {app: w2-aggregate}
-  template:
-    metadata:
-      labels: {app: w2-aggregate}
-    spec:
-      nodeSelector:
-        hedices.io/tier: cloud
-      tolerations:  # leave a failed node after 5 s instead of the default 300 s
-      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
-      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
-      containers:
-      - name: stage
-        image: aiot-bench/w2-base:latest
-        imagePullPolicy: IfNotPresent
-        env:
-        - {name: STAGE, value: aggregate}
-        ports:
-        - containerPort: 8080
-        resources:
-          requests: {cpu: "1", memory: 512Mi}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: w2-aggregate
-spec:
-  selector: {app: w2-aggregate}
   ports:
   - port: 80
     targetPort: 8080

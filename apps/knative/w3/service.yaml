@@ -80,10 +80,10 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/min-scale: "4"
+        autoscaling.knative.dev/min-scale: "2"
     spec:
       nodeSelector:
-        hedices.io/tier: edge
+        hedices.io/tier: cloud
       tolerations:  # leave a failed node after 5 s instead of the default 300 s
       - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
       - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}

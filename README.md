@@ -60,7 +60,7 @@ Intelligent IoT Applications*:
 | | Workload | Input | Model | Pipeline stages |
 |:-:|---|---|---|---|
 | 🔌 | **W1 Recognition** | Household current trace ([UK-DALE](https://jack-kelly.com/data/)), 320-sample windows | 2-layer LSTM, on/off state of 15 appliances | signal decoding → window normalization → recognition → aggregation |
-| 🎯 | **W2 Tracking** | 224×224 camera frames | YOLOX-nano (ONNX) | frame read → pre-processing → appearance tracking → {cloud re-detection (~30% of frames) ∥ edge track-table update (~70%)} → aggregation |
+| 🎯 | **W2 Tracking** | 224×224 camera frames | YOLOX-nano (ONNX) | frame read → pre-processing → periodic re-detection → appearance tracking → aggregation → track-table update |
 | 🖼️ | **W3 Detection** | 600×600 images | Faster R-CNN (ResNet-50; MobileNetV3-320 variant) | image load → pre-processing → inference → post-processing (box decoding + NMS) → aggregation |
 | 🧭 | **W4 Fusion** | Camera frames + 6-axis IMU windows | YOLOX-nano + ~4 MB fusion CNN | {frame pre-processing → object detection} ∥ {IMU filtering} → multimodal fusion → aggregation |
 
@@ -93,7 +93,7 @@ application is **Shared** plus the framework column.
 | Workload | Shared | **Hedices** | Ray | Dask | KubeEdge | Knative |
 |---|--:|--:|--:|--:|--:|--:|
 | W1 Recognition | 68 | **28** | 43 | 42 | 212 | 150 |
-| W2 Tracking | 126 | **37** | 49 | 48 | 297 | 205 |
+| W2 Tracking | 123 | **37** | 49 | 48 | 296 | 204 |
 | W3 Detection | 106 | **31** | 47 | 46 | 255 | 178 |
 | W4 Fusion | 125 | **33** | 51 | 49 | 261 | 182 |
 

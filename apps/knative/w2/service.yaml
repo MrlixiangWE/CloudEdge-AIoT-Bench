@@ -6,10 +6,10 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/min-scale: "4"
+        autoscaling.knative.dev/min-scale: "2"
     spec:
       nodeSelector:
-        hedices.io/tier: edge
+        hedices.io/tier: cloud
       tolerations:  # leave a failed node after 5 s instead of the default 300 s
       - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
       - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
@@ -49,6 +49,32 @@ spec:
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
+  name: w2-retrack
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "4"
+    spec:
+      containerConcurrency: 1  # one call at a time per model replica
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - image: aiot-bench/w2-onnx:latest
+        env:
+        - {name: STAGE, value: retrack}
+        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 1Gi}
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
   name: w2-track
 spec:
   template:
@@ -73,28 +99,26 @@ spec:
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: w2-retrack
+  name: w2-aggregate
 spec:
   template:
     metadata:
       annotations:
         autoscaling.knative.dev/min-scale: "2"
     spec:
-      containerConcurrency: 1  # one call at a time per model replica
       nodeSelector:
         hedices.io/tier: cloud
       tolerations:  # leave a failed node after 5 s instead of the default 300 s
       - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
       - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
       containers:
-      - image: aiot-bench/w2-onnx:latest
+      - image: aiot-bench/w2-base:latest
         env:
-        - {name: STAGE, value: retrack}
-        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        - {name: STAGE, value: aggregate}
         ports:
         - containerPort: 8080
         resources:
-          requests: {cpu: "2", memory: 1Gi}
+          requests: {cpu: "1", memory: 512Mi}
 ---
 apiVersion: serving.knative.dev/v1
 kind: Service
@@ -119,27 +143,3 @@ spec:
         - containerPort: 8080
         resources:
           requests: {cpu: "1", memory: 256Mi}
----
-apiVersion: serving.knative.dev/v1
-kind: Service
-metadata:
-  name: w2-aggregate
-spec:
-  template:
-    metadata:
-      annotations:
-        autoscaling.knative.dev/min-scale: "2"
-    spec:
-      nodeSelector:
-        hedices.io/tier: cloud
-      tolerations:  # leave a failed node after 5 s instead of the default 300 s
-      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
-      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
-      containers:
-      - image: aiot-bench/w2-base:latest
-        env:
-        - {name: STAGE, value: aggregate}
-        ports:
-        - containerPort: 8080
-        resources:
-          requests: {cpu: "1", memory: 512Mi}

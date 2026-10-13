@@ -1,4 +1,4 @@
-"""W3 Detection: Faster R-CNN with cloud-side I/O, preprocessing and aggregation, edge-side inference and post-processing.
+"""W3 Detection: Faster R-CNN with cloud-side I/O, preprocessing and post-processing, edge-side inference.
 
 The default is the ResNet-50 model on 600x600 frames (decoded with DecodeBox + per-class
 NMS); HEDICES_W3_MODEL=mobilenet selects the torchvision MobileNetV3-320 variant on 320x320 frames.

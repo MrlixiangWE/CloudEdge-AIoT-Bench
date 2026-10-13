@@ -10,13 +10,13 @@ GB = 1 << 30
 
 
 class Models(WorkerPlugin):
-    """Loads the YOLOX session once on every cloud worker before tasks arrive, with native threads
+    """Loads the YOLOX session once on every edge worker before tasks arrive, with native threads
     limited to the CPUs one retrack task reserves (workers run several tasks concurrently)."""
 
     name = "w2-models"
 
     def setup(self, worker):
-        if "cloud" in worker.state.total_resources:
+        if "edge" in worker.state.total_resources:
             self.detector = L.new_detector(RESOURCES[retrack]["CPU"])
 
 
@@ -28,29 +28,29 @@ def preprocess(frame):
     return L.preprocess(frame)
 
 
-def track(frame, frame_idx):
-    return L.track(frame, frame_idx)
+def retrack(tensor, frame_idx):
+    return L.redetect(tensor, frame_idx, get_worker().plugins[Models.name].detector)
 
 
-def retrack(tensor, tracks):
-    return L.retrack(tensor, tracks, get_worker().plugins[Models.name].detector)
+def track(frame, dets, frame_idx):
+    return L.update_tracks(frame, dets, frame_idx)
 
 
-def track_update(tracks):
-    return L.track_update(tracks)
+def aggregate(tracks):
+    return L.summarize_tracks(tracks)
 
 
-def aggregate(tracks, dets, update):
-    return L.summarize_tracks(tracks, dets, update)
+def track_update(summary):
+    return L.track_update(summary)
 
 
 # placement tier and resource demand of each stage (workers advertise their tier, CPU and MEM)
-RESOURCES = {read_frame: {"edge": 1, "CPU": 1, "MEM": GB},
+RESOURCES = {read_frame: {"cloud": 1, "CPU": 1, "MEM": GB},
              preprocess: {"edge": 1, "CPU": 1, "MEM": GB // 2},
+             retrack: {"edge": 1, "CPU": 2, "MEM": GB},
              track: {"edge": 1, "CPU": 1, "MEM": GB // 2},
-             retrack: {"cloud": 1, "CPU": 2, "MEM": GB},
-             track_update: {"edge": 1, "CPU": 1, "MEM": GB // 4},
-             aggregate: {"cloud": 1, "CPU": 1, "MEM": GB // 2}}
+             aggregate: {"cloud": 1, "CPU": 1, "MEM": GB // 2},
+             track_update: {"edge": 1, "CPU": 1, "MEM": GB // 4}}
 
 
 def submit(client, stage, req_id, *args):
@@ -61,10 +61,10 @@ def submit(client, stage, req_id, *args):
 def workflow(client, req_id, frame_idx):
     frame = submit(client, read_frame, req_id, frame_idx)
     tensor = submit(client, preprocess, req_id, frame)
-    tracks = submit(client, track, req_id, frame, frame_idx)
-    dets = submit(client, retrack, req_id, tensor, tracks)
-    update = submit(client, track_update, req_id, tracks)
-    return submit(client, aggregate, req_id, tracks, dets, update)
+    dets = submit(client, retrack, req_id, tensor, frame_idx)
+    tracks = submit(client, track, req_id, frame, dets, frame_idx)
+    summary = submit(client, aggregate, req_id, tracks)
+    return submit(client, track_update, req_id, summary)
 
 
 def deploy(client, packages):
