@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320">
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1026"/>
+      <stop offset="0.6" stop-color="#111C44"/>
+      <stop offset="1" stop-color="#0E3A52"/>
+    </linearGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F46E5"/>
+      <stop offset="0.55" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#A5F3FC"/>
+    </linearGradient>
+    <linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DBEAFE"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.18" cy="0.5" r="0.45">
+      <stop offset="0" stop-color="#3B82F6" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#3B82F6" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0 H0 V32" fill="none" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1280" height="320" rx="24" fill="url(#card)"/>
+  <rect width="1280" height="320" rx="24" fill="url(#grid)"/>
+  <rect width="1280" height="320" rx="24" fill="url(#halo)"/>
+
+  <!-- faint pipeline motif on the right -->
+  <g stroke="#38BDF8" stroke-opacity="0.22" stroke-width="2" fill="none">
+    <path d="M980 70 C1050 70 1060 160 1130 160 S1210 250 1250 250"/>
+    <path d="M960 250 C1040 250 1060 160 1130 160"/>
+  </g>
+  <g fill="#38BDF8" fill-opacity="0.35">
+    <circle cx="980" cy="70" r="6"/><circle cx="960" cy="250" r="6"/>
+    <circle cx="1130" cy="160" r="8"/><circle cx="1250" cy="250" r="6"/>
+  </g>
+
+  <!-- logo (same artwork as docs/logo.svg) -->
+  <g transform="translate(56 32) scale(1.0)">
+    <path fill="url(#bg)" d="M128 12 L228 70 Q236 75 236 84 L236 172 Q236 181 228 186 L128 244 L28 186 Q20 181 20 172 L20 84 Q20 75 28 70 Z"/>
+    <path fill="url(#cloud)" d="M84 104 a22 22 0 0 1 4-43.6 a30 30 0 0 1 56-8 a24 24 0 0 1 36 21 a16 16 0 0 1 -4 30.6 Z"/>
+    <circle cx="108" cy="86" r="5" fill="#4F46E5"/>
+    <circle cx="132" cy="80" r="5" fill="#2563EB"/>
+    <circle cx="156" cy="86" r="5" fill="#0891B2"/>
+    <path d="M108 86 L132 80 L156 86" stroke="#4F46E5" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g stroke="#E0F2FE" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 9" fill="none">
+      <path d="M100 106 L72 162"/><path d="M128 106 L128 162"/><path d="M156 106 L184 162"/>
+    </g>
+    <g fill="#FFFFFF" stroke="#BAE6FD" stroke-width="2">
+      <rect x="54" y="160" width="36" height="36" rx="8"/>
+      <rect x="110" y="160" width="36" height="36" rx="8"/>
+      <rect x="166" y="160" width="36" height="36" rx="8"/>
+    </g>
+    <g stroke="#FFFFFF" stroke-width="3" stroke-linecap="round">
+      <path d="M62 156 v-5 M72 156 v-5 M82 156 v-5 M62 200 v5 M72 200 v5 M82 200 v5"/>
+      <path d="M118 156 v-5 M128 156 v-5 M138 156 v-5 M118 200 v5 M128 200 v5 M138 200 v5"/>
+      <path d="M174 156 v-5 M184 156 v-5 M194 156 v-5 M174 200 v5 M184 200 v5 M194 200 v5"/>
+    </g>
+    <path d="M60 179 h7 l4 -9 l6 18 l4 -9 h7" stroke="#4F46E5" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <g fill="none" stroke="#2563EB" stroke-width="3" stroke-linejoin="round">
+      <rect x="117" y="171" width="22" height="15" rx="3"/><circle cx="128" cy="178.5" r="4"/>
+    </g>
+    <g stroke="#0891B2" stroke-width="3" stroke-linecap="round" fill="none">
+      <path d="M184 166 v24 M172 178 h24"/><circle cx="184" cy="178" r="6"/>
+    </g>
+  </g>
+
+  <g font-family="Inter, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+    <text x="340" y="138" font-size="62" font-weight="800" fill="url(#title)" letter-spacing="-1">CloudEdge-AIoT-Bench</text>
+    <text x="342" y="186" font-size="25" font-weight="500" fill="#CBD5E1">A cloud–edge collaborative benchmark suite for intelligent IoT pipelines</text>
+    <g font-size="17" font-weight="600">
+      <rect x="342" y="216" width="170" height="36" rx="18" fill="#4F46E5" fill-opacity="0.28" stroke="#818CF8" stroke-opacity="0.6"/>
+      <text x="427" y="240" text-anchor="middle" fill="#E0E7FF">4 AIoT workloads</text>
+      <rect x="526" y="216" width="170" height="36" rx="18" fill="#2563EB" fill-opacity="0.28" stroke="#60A5FA" stroke-opacity="0.6"/>
+      <text x="611" y="240" text-anchor="middle" fill="#DBEAFE">5 frameworks</text>
+      <rect x="710" y="216" width="230" height="36" rx="18" fill="#0891B2" fill-opacity="0.28" stroke="#22D3EE" stroke-opacity="0.6"/>
+      <text x="825" y="240" text-anchor="middle" fill="#CFFAFE">shared application code</text>
+    </g>
+  </g>
+</svg>

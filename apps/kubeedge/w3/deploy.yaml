@@ -1,0 +1,198 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w3-load-image
+  labels: {app: w3-load-image}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: w3-load-image}
+  template:
+    metadata:
+      labels: {app: w3-load-image}
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w3-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: load_image}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 1Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w3-load-image
+spec:
+  selector: {app: w3-load-image}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w3-preprocess
+  labels: {app: w3-preprocess}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: w3-preprocess}
+  template:
+    metadata:
+      labels: {app: w3-preprocess}
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w3-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: preprocess}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 1Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w3-preprocess
+spec:
+  selector: {app: w3-preprocess}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w3-infer
+  labels: {app: w3-infer}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w3-infer}
+  template:
+    metadata:
+      labels: {app: w3-infer}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w3-torch:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: infer}
+        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 2Gi}
+        readinessProbe:  # ready once the model is loaded and the port opens
+          tcpSocket: {port: 8080}
+          periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w3-infer
+spec:
+  selector: {app: w3-infer}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w3-postprocess
+  labels: {app: w3-postprocess}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: w3-postprocess}
+  template:
+    metadata:
+      labels: {app: w3-postprocess}
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w3-torch:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: postprocess}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 1Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w3-postprocess
+spec:
+  selector: {app: w3-postprocess}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w3-aggregate
+  labels: {app: w3-aggregate}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: w3-aggregate}
+  template:
+    metadata:
+      labels: {app: w3-aggregate}
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w3-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: aggregate}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w3-aggregate
+spec:
+  selector: {app: w3-aggregate}
+  ports:
+  - port: 80
+    targetPort: 8080

@@ -1,0 +1,159 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w1-load-signal
+  labels: {app: w1-load-signal}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w1-load-signal}
+  template:
+    metadata:
+      labels: {app: w1-load-signal}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w1-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: load_signal}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 1Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w1-load-signal
+spec:
+  selector: {app: w1-load-signal}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w1-preproc
+  labels: {app: w1-preproc}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w1-preproc}
+  template:
+    metadata:
+      labels: {app: w1-preproc}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w1-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: preproc}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 1Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w1-preproc
+spec:
+  selector: {app: w1-preproc}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w1-recognize
+  labels: {app: w1-recognize}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w1-recognize}
+  template:
+    metadata:
+      labels: {app: w1-recognize}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w1-torch:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: recognize}
+        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 2Gi}
+        readinessProbe:  # ready once the model is loaded and the port opens
+          tcpSocket: {port: 8080}
+          periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w1-recognize
+spec:
+  selector: {app: w1-recognize}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w1-aggregate
+  labels: {app: w1-aggregate}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: w1-aggregate}
+  template:
+    metadata:
+      labels: {app: w1-aggregate}
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w1-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: aggregate}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w1-aggregate
+spec:
+  selector: {app: w1-aggregate}
+  ports:
+  - port: 80
+    targetPort: 8080

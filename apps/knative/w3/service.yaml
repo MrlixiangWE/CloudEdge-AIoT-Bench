@@ -1,0 +1,121 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: w3-load-image
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "2"
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - image: aiot-bench/w3-base:latest
+        env:
+        - {name: STAGE, value: load_image}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 1Gi}
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: w3-preprocess
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "2"
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - image: aiot-bench/w3-base:latest
+        env:
+        - {name: STAGE, value: preprocess}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 1Gi}
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: w3-infer
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "4"
+    spec:
+      containerConcurrency: 1  # one call at a time per model replica
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - image: aiot-bench/w3-torch:latest
+        env:
+        - {name: STAGE, value: infer}
+        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 2Gi}
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: w3-postprocess
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "2"
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - image: aiot-bench/w3-torch:latest
+        env:
+        - {name: STAGE, value: postprocess}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 1Gi}
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: w3-aggregate
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/min-scale: "2"
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - image: aiot-bench/w3-base:latest
+        env:
+        - {name: STAGE, value: aggregate}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 512Mi}

@@ -1,0 +1,202 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w4-preproc-frame
+  labels: {app: w4-preproc-frame}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w4-preproc-frame}
+  template:
+    metadata:
+      labels: {app: w4-preproc-frame}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w4-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: preproc_frame}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w4-preproc-frame
+spec:
+  selector: {app: w4-preproc-frame}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w4-detect-objects
+  labels: {app: w4-detect-objects}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w4-detect-objects}
+  template:
+    metadata:
+      labels: {app: w4-detect-objects}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w4-onnx:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: detect_objects}
+        - {name: OMP_NUM_THREADS, value: "2"}  # native threads = CPU request
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "2", memory: 2Gi}
+        readinessProbe:  # ready once the model is loaded and the port opens
+          tcpSocket: {port: 8080}
+          periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w4-detect-objects
+spec:
+  selector: {app: w4-detect-objects}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w4-preproc-imu
+  labels: {app: w4-preproc-imu}
+spec:
+  replicas: 4
+  selector:
+    matchLabels: {app: w4-preproc-imu}
+  template:
+    metadata:
+      labels: {app: w4-preproc-imu}
+    spec:
+      nodeSelector:
+        hedices.io/tier: edge
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w4-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: preproc_imu}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w4-preproc-imu
+spec:
+  selector: {app: w4-preproc-imu}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w4-fuse
+  labels: {app: w4-fuse}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: w4-fuse}
+  template:
+    metadata:
+      labels: {app: w4-fuse}
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w4-torch:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: fuse}
+        - {name: OMP_NUM_THREADS, value: "4"}  # native threads = CPU request
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "4", memory: 4Gi}
+        readinessProbe:  # ready once the model is loaded and the port opens
+          tcpSocket: {port: 8080}
+          periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w4-fuse
+spec:
+  selector: {app: w4-fuse}
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: w4-aggregate
+  labels: {app: w4-aggregate}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: w4-aggregate}
+  template:
+    metadata:
+      labels: {app: w4-aggregate}
+    spec:
+      nodeSelector:
+        hedices.io/tier: cloud
+      tolerations:  # leave a failed node after 5 s instead of the default 300 s
+      - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
+      containers:
+      - name: stage
+        image: aiot-bench/w4-base:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - {name: STAGE, value: aggregate}
+        ports:
+        - containerPort: 8080
+        resources:
+          requests: {cpu: "1", memory: 512Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: w4-aggregate
+spec:
+  selector: {app: w4-aggregate}
+  ports:
+  - port: 80
+    targetPort: 8080
