@@ -7,8 +7,9 @@ import requests
 from apps.common import w2 as L
 
 URLS = {s: os.environ.get(f"{s.upper()}_URL", f"http://w2-{s.replace('_', '-')}.default.svc.cluster.local")
-        for s in ("read_frame", "preprocess", "retrack", "track", "aggregate", "track_update")}
+        for s in ("read_frame", "preprocess", "track", "retrack", "track_update", "aggregate")}
 session = requests.Session()
+branches = ThreadPoolExecutor(max_workers=8)
 
 
 def call(stage, *args, attempts=3):
@@ -26,10 +27,10 @@ def call(stage, *args, attempts=3):
 def workflow(req_id, frame_idx):
     frame = call("read_frame", frame_idx)
     tensor = call("preprocess", frame)
-    dets = call("retrack", tensor, frame_idx)
-    tracks = call("track", frame, dets, frame_idx)
-    summary = call("aggregate", tracks)
-    return call("track_update", summary)
+    tracks = call("track", frame, frame_idx)
+    dets = branches.submit(call, "retrack", tensor, tracks)  # cloud retrack and edge track
+    update = call("track_update", tracks)  # update run concurrently
+    return call("aggregate", tracks, dets.result(), update)
 
 
 if __name__ == "__main__":

@@ -1,17 +1,18 @@
 """W2 Tracking: YOLOX detect-then-track on 224x224 frames with periodic re-detection.
 
-Frames are read on the cloud side; every frame is preprocessed and tracked on the edge, every
-REDETECT_EVERY-th frame is re-detected with YOLOX, and track summaries are aggregated in the
-cloud and pushed back to the edge track table.
+Camera frames are read, preprocessed and tracked on the edge. About 30% of the frames are
+re-detected with YOLOX in the cloud (retrack); on the other 70% the edge updates its track table
+(track update). Both branches are aggregated in the cloud into one per-frame track summary.
 """
 import numpy as np
 
 from apps.common import assets as A
 from apps.common import yolox as Y
 
-REDETECT_EVERY = 3
+REDETECT_PER_10 = 3  # frames out of every 10 that are re-detected in the cloud
 INPUT = 320  # 224x224 frames are letterboxed into the 320x320 YOLOX-nano input
-MAX_TRACK_AGE = 2 * REDETECT_EVERY
+MAX_TRACK_AGE = 6
+GRID = 2  # track windows per side
 
 
 def new_detector(threads=None):
@@ -61,35 +62,38 @@ def detect(tensor, sess=None, score_thr=0.25, nms_thr=0.45):
     return np.concatenate([xyxy[keep], conf[m][keep, None], cls[m][keep, None]], 1).astype(np.float32)
 
 
-def redetect(tensor, frame_idx, sess=None):
-    """Re-detect on every REDETECT_EVERY-th frame; other frames keep the existing tracks."""
-    return None if frame_idx % REDETECT_EVERY else detect(tensor, sess)
+def track(frame, frame_idx):
+    """Edge-side appearance tracking: colour-histogram descriptors of the track windows."""
+    h, w = frame.shape[:2]
+    windows = []
+    for k in range(GRID * GRID):
+        r, c = divmod(k, GRID)
+        patch = frame[r * h // GRID:(r + 1) * h // GRID, c * w // GRID:(c + 1) * w // GRID]
+        hist = np.concatenate([np.histogram(patch[..., ch], bins=16, range=(0, 255))[0] for ch in range(3)])
+        windows.append(hist.astype(np.float32) / patch.size)
+    return {"frame": frame_idx, "redetect": frame_idx % 10 < REDETECT_PER_10, "windows": np.stack(windows)}
 
 
-def update_tracks(frame, dets, frame_idx):
-    """Appearance descriptors (colour histograms) for each tracked box."""
-    if dets is None or len(dets) == 0:
-        h, w = frame.shape[:2]
-        dets = np.array([[0, 0, w, h, 0.0, -1]], np.float32)
-    tracks = []
-    for k, (x1, y1, x2, y2, conf, cls) in enumerate(dets):
-        patch = frame[max(int(y1), 0):max(int(y2), 1), max(int(x1), 0):max(int(x2), 1)]
-        if patch.size == 0:
-            continue
-        hist = np.concatenate([np.histogram(patch[..., c], bins=16, range=(0, 255))[0] for c in range(3)])
-        tracks.append((k, int(cls), float(conf), hist.astype(np.float32) / max(patch.size, 1)))
-    return {"frame": frame_idx, "redetect": frame_idx % REDETECT_EVERY == 0, "tracks": tracks}
+def retrack(tensor, tracks, sess=None):
+    """Cloud-side re-detection of the ~30% frames flagged by the tracker; None on the others."""
+    return detect(tensor, sess) if tracks["redetect"] else None
 
 
-def summarize_tracks(tracks):
-    return {"frame": tracks["frame"], "n": len(tracks["tracks"]),
-            "classes": sorted({c for _, c, _, _ in tracks["tracks"] if c >= 0})}
+def track_update(tracks):
+    """Edge-side track-table update on the ~70% frames that are not re-detected."""
+    if tracks["redetect"]:
+        return None
+    return {"frame": tracks["frame"], "active": len(tracks["windows"]),
+            "expire_before": tracks["frame"] - MAX_TRACK_AGE}
 
 
-def track_update(summary):
-    """Edge-side track-table update derived from the cloud summary: active classes and expiry."""
-    return {"frame": summary["frame"], "active": summary["classes"],
-            "expire_before": summary["frame"] - MAX_TRACK_AGE, "reset": summary["n"] == 0}
+def summarize_tracks(tracks, dets, update):
+    """Cloud-side aggregation of whichever branch ran into one per-frame track summary."""
+    if dets is not None:
+        return {"frame": tracks["frame"], "source": "retrack", "n": len(dets),
+                "classes": sorted({int(c) for c in dets[:, 5]})}
+    return {"frame": tracks["frame"], "source": "track_update", "n": update["active"],
+            "expire_before": update["expire_before"]}
 
 
 def inputs(n=8):

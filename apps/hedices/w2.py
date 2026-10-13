@@ -3,7 +3,7 @@ from hedices.master import Master
 from apps.common import w2 as L
 
 
-@Stem("cloud", cpus=1, mem="1GB")
+@Stem("edge", cpus=1, mem="1GB")
 def read_frame(req_id, frame_idx):
     return L.load_frame(frame_idx)
 
@@ -14,35 +14,35 @@ def preprocess(req_id, frame):
     return L.preprocess(frame)
 
 
-@Stem("edge", cpus=2, mem="1GB")
-@NoRely(flag="req_id")
-def retrack(req_id, tensor, frame_idx):
-    return L.redetect(tensor, frame_idx)
-
-
 @Stem("edge", cpus=1, mem="512MB")
 @NoRely(flag="req_id")
-def track(req_id, frame, dets, frame_idx):
-    return L.update_tracks(frame, dets, frame_idx)
+def track(req_id, frame, frame_idx):
+    return L.track(frame, frame_idx)
 
 
-@Stem("cloud", cpus=1, mem="512MB")
-def aggregate(req_id, tracks):
-    return L.summarize_tracks(tracks)
+@Stem("cloud", cpus=2, mem="1GB")
+@NoRely(flag="req_id")
+def retrack(req_id, tensor, tracks):
+    return L.retrack(tensor, tracks)
 
 
 @Stem("edge", cpus=1, mem="256MB")
-def track_update(req_id, summary):
-    return L.track_update(summary)
+def track_update(req_id, tracks):
+    return L.track_update(tracks)
+
+
+@Stem("cloud", cpus=1, mem="512MB")
+def aggregate(req_id, tracks, dets, update):
+    return L.summarize_tracks(tracks, dets, update)
 
 
 def workflow(req_id, frame_idx):
     frame = read_frame(req_id, frame_idx)
     tensor = preprocess(req_id, frame)
-    dets = retrack(req_id, tensor, frame_idx)
-    tracks = track(req_id, frame, dets, frame_idx)
-    summary = aggregate(req_id, tracks)
-    return track_update(req_id, summary)
+    tracks = track(req_id, frame, frame_idx)
+    dets = retrack(req_id, tensor, tracks)
+    update = track_update(req_id, tracks)
+    return aggregate(req_id, tracks, dets, update)
 
 
 if __name__ == "__main__":

@@ -46,7 +46,7 @@ def aggregate(dets):
 RESOURCES = {load_image: {"cloud": 1, "CPU": 1, "MEM": GB},
              preprocess: {"cloud": 1, "CPU": 1, "MEM": GB},
              infer: {"edge": 1, "CPU": 2, "MEM": 2 * GB},
-             postprocess: {"cloud": 1, "CPU": 2, "MEM": GB},
+             postprocess: {"edge": 1, "CPU": 2, "MEM": GB},
              aggregate: {"cloud": 1, "CPU": 1, "MEM": GB // 2}}
 
 

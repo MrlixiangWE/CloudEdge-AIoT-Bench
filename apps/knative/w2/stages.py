@@ -7,10 +7,10 @@ from apps.common import w2 as L
 
 STAGES = {"read_frame": L.load_frame,
           "preprocess": L.preprocess,
-          "retrack": L.redetect,
-          "track": L.update_tracks,
-          "aggregate": L.summarize_tracks,
-          "track_update": L.track_update}
+          "track": L.track,
+          "retrack": L.retrack,
+          "track_update": L.track_update,
+          "aggregate": L.summarize_tracks}
 MODELS = {"retrack": L.load_detector}
 STAGE = os.environ["STAGE"]  # each Deployment/Service runs one stage
 app = Flask(__name__)

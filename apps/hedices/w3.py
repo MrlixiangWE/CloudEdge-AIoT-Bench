@@ -19,7 +19,7 @@ def infer(req_id, tensor):
     return L.frcnn_infer(tensor)
 
 
-@Stem("cloud", cpus=2, mem="1GB")
+@Stem("edge", cpus=2, mem="1GB")
 def postprocess(req_id, raw):
     return L.postprocess(raw)
 

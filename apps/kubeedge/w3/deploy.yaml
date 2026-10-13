@@ -125,7 +125,7 @@ metadata:
   name: w3-postprocess
   labels: {app: w3-postprocess}
 spec:
-  replicas: 2
+  replicas: 4
   selector:
     matchLabels: {app: w3-postprocess}
   template:
@@ -133,7 +133,7 @@ spec:
       labels: {app: w3-postprocess}
     spec:
       nodeSelector:
-        hedices.io/tier: cloud
+        hedices.io/tier: edge
       tolerations:  # leave a failed node after 5 s instead of the default 300 s
       - {key: node.kubernetes.io/unreachable, operator: Exists, effect: NoExecute, tolerationSeconds: 5}
       - {key: node.kubernetes.io/not-ready, operator: Exists, effect: NoExecute, tolerationSeconds: 5}

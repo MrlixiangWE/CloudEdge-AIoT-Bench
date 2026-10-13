@@ -34,7 +34,7 @@ class Detector:
         return L.frcnn_infer(tensor, self.model)
 
 
-@ray.remote(num_cpus=2, memory=1 << 30, resources=CLOUD)
+@ray.remote(num_cpus=2, memory=1 << 30, resources=EDGE)
 def postprocess(raw):
     return L.postprocess(raw)
 
